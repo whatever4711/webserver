@@ -68,18 +68,18 @@ EOF
 sudo sed -i 's/%PLACEHOLDER%/'"${PHPMYADMINPORT}"'/g' /etc/apache2/conf-available/phpmyadmin.conf
 sudo a2enconf phpmyadmin
 
-# TODO: Environment variables? 
+# TODO: Environment variables in Virtualhost?
+# SetEnv APP_ENV $APPENV
+# SetEnv DB_HOST $DBHOST
+# SetEnv DB_NAME $DBNAME
+# SetEnv DB_USER $DBUSER
+# SetEnv DB_PASS $DBPASSWD 
 echo -e "\n--- Add environment variables to Apache ---\n"
 sudo bash -c "cat > /etc/apache2/sites-enabled/000-default.conf" <<EOF
 <VirtualHost *:80>
     DocumentRoot /var/www
     ErrorLog \${APACHE_LOG_DIR}/error.log
-    CustomLog \${APACHE_LOG_DIR}/access.log combined
-    SetEnv APP_ENV $APPENV
-    SetEnv DB_HOST $DBHOST
-    SetEnv DB_NAME $DBNAME
-    SetEnv DB_USER $DBUSER
-    SetEnv DB_PASS $DBPASSWD
+    CustomLog \${APACHE_LOG_DIR}/access.log combined    
 </VirtualHost>
 EOF
  
