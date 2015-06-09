@@ -13,7 +13,7 @@ cd ~
 sed -i 's/#force_color_prompt=yes/force_color_prompt=yes/g' .bashrc
  
 echo -e "\n--- Updating packages list ---\n"
-apt-get -qq update
+sudo apt-get -qq update
 export DEBIAN_FRONTEND=noninteractive
  
 echo -e "\n--- Install base packages ---\n"
@@ -54,7 +54,7 @@ echo -e "\n--- Turn off disabled pcntl functions so we can use Boris ---\n"
 sudo sed -i "s/disable_functions = .*//" /etc/php5/cli/php.ini
 
 echo -e "\n--- Configure Apache to use phpmyadmin ---\n"
-sudo sed -e '$a\' -e 'Listen '"${PHPMYADMINPORT}"'' -e "/Listen '"${PHPMYADMINPORT}"'/d" /etc/apache2/ports.conf
+sudo sed -i -e '$a\' -e 'Listen '"${PHPMYADMINPORT}"'' -e '/Listen '"${PHPMYADMINPORT}"'/d' /etc/apache2/ports.conf
 # TODO: Nicer solution anyone?
 sudo bash -c "cat > /etc/apache2/conf-available/phpmyadmin.conf" << "EOF"
 <VirtualHost *:%PLACEHOLDER%>
