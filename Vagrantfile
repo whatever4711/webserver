@@ -2,13 +2,13 @@
 # vi: set ft=ruby :
 
 
-APP_ENV="local"
 DB_HOST="localhost"
 DB_NAME="dbname"
 DB_USER="dbuser"
 DB_USER_PWD="123"
 DB_ROOT_PWD="456"
 PHPMYADMIN_PORT="81"
+APP_NAME="webdjango"
 
 Vagrant.configure(2) do |config|
   # The most common configuration options are documented and commented below.
@@ -51,13 +51,13 @@ Vagrant.configure(2) do |config|
   config.vm.provider "virtualbox" do |v|
       v.name = "webserver"
       v.gui=true
-      v.customize ["modifyvm", :id, "--cpuexecutioncap", "75"]
+      v.customize ["modifyvm", :id, "--cpuexecutioncap", "99"]
       v.customize ["modifyvm", :id, "--memory", "4096"]
   end
   config.vm.provision :shell, privileged: false, :path => "setup/basic-setup.sh"
   config.vm.provision :shell, privileged: false, :path => "setup/mysql.sh", args: [DB_ROOT_PWD, DB_NAME, DB_USER, DB_USER_PWD]
   config.vm.provision :shell, privileged: false, :path => "setup/phpmyadmin.sh", args: [DB_ROOT_PWD, DB_USER_PWD]
-  config.vm.provision :shell, privileged: false, :path => "setup/lamp.sh", args: PHPMYADMIN_PORT
+  config.vm.provision :shell, privileged: false, :path => "setup/lamp.sh", args: [PHPMYADMIN_PORT, APP_NAME]
   #
   # View the documentation for the provider you are using for more
   # information on available options.

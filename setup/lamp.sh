@@ -2,6 +2,7 @@
  
 # Variables
 PHPMYADMIN_PORT=$1
+APP_NAME=$2
 
 echo -e "\n--- Enabling mod-rewrite ---\n"
 sudo a2enmod rewrite
@@ -35,29 +36,43 @@ EOF
 sudo sed -i 's/%PLACEHOLDER%/'"${PHPMYADMIN_PORT}"'/g' /etc/apache2/conf-available/phpmyadmin.conf
 sudo a2enconf phpmyadmin
 
-# TODO: Environment variables in Virtualhost?
-# SetEnv APP_ENV $APPENV
-# SetEnv DB_HOST $DBHOST
-# SetEnv DB_NAME $DBNAME
-# SetEnv DB_USER $DBUSER
-# SetEnv DB_PASS $DBPASSWD 
+echo -e "\n--- For Python web applications ---\n"
+sudo apt-get install -yqq python-setuptools libapache2-mod-wsgi-py3 virtualenv
+sudo a2dismod mpm_event
+sudo a2enmod wsgi
+
+cd /var/www
+sudo mkdir $APP_NAME && cd $APP_NAME
+sudo virtualenv -p python3 env
+sudo env/bin/pip install django pymysql
+sudo env/bin/django-admin.py startproject $APP_NAME .
+
 echo -e "\n--- Add environment variables to Apache ---\n"
 sudo bash -c "cat > /etc/apache2/sites-enabled/000-default.conf" <<EOF
 <VirtualHost *:80>
+WSGIDaemonProcess %PLACEHOLDER% python-path=/var/www/%PLACEHOLDER%::/var/www/%PLACEHOLDER%/env/lib/python3.4/site-packages
+WSGIProcessGroup %PLACEHOLDER%
+WSGIScriptAlias / /var/www/%PLACEHOLDER%/%PLACEHOLDER%/wsgi.py
+
+Alias /html /var/www/html/
+
+    <Directory /var/www/test>
+       Options +ExecCGI
+       DirectoryIndex index.py
+       AddHandler cgi-script .py
+    </Directory>
+    <Directory /var/www/html>
+       Options Indexes FollowSymLinks
+       AllowOverride All
+       Require all granted
+    </Directory>
+
     DocumentRoot /var/www
-    ErrorLog \${APACHE_LOG_DIR}/error.log
-    CustomLog \${APACHE_LOG_DIR}/access.log combined    
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
 </VirtualHost>
 EOF
-
-echo -e "\n--- For Python web applicatoins ---\n"
-sudo apt-get install -yqq python-setuptools libapache2-mod-wsgi
-sudo pip3 install pymysql
-sudo a2dismod mpm_event
-sudo a2enmod mpm_prefork cgi
-
-echo -e "\n--- Virutal Host Modification for Python ---\n"
-sudo sed -i '/DocumentRoot/i <Directory /var/www/test>\n   Options +ExecCGI\n   DirectoryIndex index.py\n</Directory>\nAddHandler cgi-script .py' /etc/apache2/sites-enabled/000-default.conf
+sudo sed -i 's/%PLACEHOLDER%/'"${APP_NAME}"'/g' /etc/apache2/sites-enabled/000-default.conf
  
 echo -e "\n--- Restarting Apache ---\n"
 sudo service apache2 restart

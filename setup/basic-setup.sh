@@ -18,6 +18,5 @@ sudo apt-get -yqq install php5 libapache2-mod-php5 php5-curl php5-gd php5-mcrypt
 
 echo -e "\n--- Installing Python 3 ---\n"
 sudo apt-get -yqq install python3 python3-pip
-sudo rm /usr/bin/python
-sudo ln -s /usr/bin/python3 /usr/bin/python
+
 
