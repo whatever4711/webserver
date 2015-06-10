@@ -88,6 +88,10 @@ import pymysql
 pymysql.install_as_MySQLdb()
 EOF
 
+# TODO Script for Superuser and admin CSS
+#sudo cp -r /var/www/$APP_NAME/env/lib/python3.4/site-packages/django/contrib/admin/static /var/www/$APP_NAME
+sudo ./env/bin/python3 manage.py migrate
+
 echo -e "\n--- Add environment variables to Apache ---\n"
 sudo bash -c "cat > /etc/apache2/sites-enabled/000-default.conf" <<EOF
 <VirtualHost *:80>
