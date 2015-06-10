@@ -1,41 +1,8 @@
 #! /usr/bin/env bash
  
 # Variables
-APPENV=local
-DBHOST=localhost
-DBNAME=dbname
-DBUSER=dbuser
-DBPASSWD=test123
-PHPMYADMINPORT=81
+PHPMYADMIN_PORT=$1
 
-echo -e "\n--- Mkay, installing now... ---\n"
-cd ~
-sed -i 's/#force_color_prompt=yes/force_color_prompt=yes/g' .bashrc
- 
-echo -e "\n--- Updating packages list ---\n"
-sudo apt-get -qq update
-export DEBIAN_FRONTEND=noninteractive
- 
-echo -e "\n--- Install base packages ---\n"
-sudo apt-get -yqq install curl git
- 
-echo -e "\n--- Install MySQL specific packages and settings ---\n"
-echo "mysql-server mysql-server/root_password password $DBPASSWD" | sudo debconf-set-selections
-echo "mysql-server mysql-server/root_password_again password $DBPASSWD" | sudo debconf-set-selections
-echo "phpmyadmin phpmyadmin/dbconfig-install boolean true" | sudo debconf-set-selections
-echo "phpmyadmin phpmyadmin/app-password-confirm password $DBPASSWD" | sudo debconf-set-selections
-echo "phpmyadmin phpmyadmin/mysql/admin-pass password $DBPASSWD" | sudo debconf-set-selections
-echo "phpmyadmin phpmyadmin/mysql/app-pass password $DBPASSWD" | sudo debconf-set-selections
-echo "phpmyadmin phpmyadmin/reconfigure-webserver multiselect none" | sudo debconf-set-selections
-sudo apt-get -yqq install mysql-server phpmyadmin
- 
-echo -e "\n--- Setting up our MySQL user and db ---\n"
-mysql -uroot -p$DBPASSWD -e "CREATE DATABASE $DBNAME"
-mysql -uroot -p$DBPASSWD -e "grant all privileges on $DBNAME.* to '$DBUSER'@'localhost' identified by '$DBPASSWD'"
- 
-echo -e "\n--- Installing PHP-specific packages ---\n"
-sudo apt-get -yqq install php5 apache2 libapache2-mod-php5 php5-curl php5-gd php5-mcrypt php5-mysql php-apc
- 
 echo -e "\n--- Enabling mod-rewrite ---\n"
 sudo a2enmod rewrite
  
@@ -54,7 +21,7 @@ echo -e "\n--- Turn off disabled pcntl functions so we can use Boris ---\n"
 sudo sed -i "s/disable_functions = .*//" /etc/php5/cli/php.ini
 
 echo -e "\n--- Configure Apache to use phpmyadmin ---\n"
-sudo sed -i -e '$a\' -e 'Listen '"${PHPMYADMINPORT}"'' -e '/Listen '"${PHPMYADMINPORT}"'/d' /etc/apache2/ports.conf
+sudo sed -i -e '$a\' -e 'Listen '"${PHPMYADMIN_PORT}"'' -e '/Listen '"${PHPMYADMIN_PORT}"'/d' /etc/apache2/ports.conf
 # TODO: Nicer solution anyone?
 sudo bash -c "cat > /etc/apache2/conf-available/phpmyadmin.conf" << "EOF"
 <VirtualHost *:%PLACEHOLDER%>
@@ -65,7 +32,7 @@ sudo bash -c "cat > /etc/apache2/conf-available/phpmyadmin.conf" << "EOF"
     CustomLog ${APACHE_LOG_DIR}/phpmyadmin-access.log combined
 </VirtualHost>
 EOF
-sudo sed -i 's/%PLACEHOLDER%/'"${PHPMYADMINPORT}"'/g' /etc/apache2/conf-available/phpmyadmin.conf
+sudo sed -i 's/%PLACEHOLDER%/'"${PHPMYADMIN_PORT}"'/g' /etc/apache2/conf-available/phpmyadmin.conf
 sudo a2enconf phpmyadmin
 
 # TODO: Environment variables in Virtualhost?
@@ -82,6 +49,15 @@ sudo bash -c "cat > /etc/apache2/sites-enabled/000-default.conf" <<EOF
     CustomLog \${APACHE_LOG_DIR}/access.log combined    
 </VirtualHost>
 EOF
+
+echo -e "\n--- For Python web applicatoins ---\n"
+sudo apt-get install -yqq python-setuptools libapache2-mod-wsgi
+sudo pip3 install pymysql
+sudo a2dismod mpm_event
+sudo a2enmod mpm_prefork cgi
+
+echo -e "\n--- Virutal Host Modification for Python ---\n"
+sudo sed -i '/DocumentRoot/i <Directory /var/www/test>\n   Options +ExecCGI\n   DirectoryIndex index.py\n</Directory>\nAddHandler cgi-script .py' /etc/apache2/sites-enabled/000-default.conf
  
 echo -e "\n--- Restarting Apache ---\n"
 sudo service apache2 restart
@@ -109,12 +85,12 @@ sudo service apache2 restart
 #ln -fs /vagrant/vendor/bin/phpunit /usr/local/bin/phpunit
  
 #echo -e "\n--- Add environment variables locally for artisan ---\n"
-cat >> /home/vagrant/.bashrc <<EOF
+#cat >> /home/vagrant/.bashrc <<EOF
 
 # Set envvars
-export APP_ENV=$APPENV
-export DB_HOST=$DBHOST
-export DB_NAME=$DBNAME
-export DB_USER=$DBUSER
-export DB_PASS=$DBPASSWD
-EOF
+#export APP_ENV=$APPENV
+#export DB_HOST=$DBHOST
+#export DB_NAME=$DBNAME
+#export DB_USER=$DBUSER
+#export DB_PASS=$DBPASSWD
+#EOF

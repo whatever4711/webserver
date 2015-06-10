@@ -1,10 +1,15 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-# All Vagrant configuration is done below. The "2" in Vagrant.configure
-# configures the configuration version (we support older styles for
-# backwards compatibility). Please don't change it unless you know what
-# you're doing.
+
+APP_ENV="local"
+DB_HOST="localhost"
+DB_NAME="dbname"
+DB_USER="dbuser"
+DB_USER_PWD="123"
+DB_ROOT_PWD="456"
+PHPMYADMIN_PORT="81"
+
 Vagrant.configure(2) do |config|
   # The most common configuration options are documented and commented below.
   # For a complete reference, please see the online documentation at
@@ -49,8 +54,10 @@ Vagrant.configure(2) do |config|
       v.customize ["modifyvm", :id, "--cpuexecutioncap", "75"]
       v.customize ["modifyvm", :id, "--memory", "4096"]
   end
-
-  config.vm.provision :shell, privileged: false, :path => "setup/apache.sh"
+  config.vm.provision :shell, privileged: false, :path => "setup/basic-setup.sh"
+  config.vm.provision :shell, privileged: false, :path => "setup/mysql.sh", args: [DB_ROOT_PWD, DB_NAME, DB_USER, DB_USER_PWD]
+  config.vm.provision :shell, privileged: false, :path => "setup/phpmyadmin.sh", args: [DB_ROOT_PWD, DB_USER_PWD]
+  config.vm.provision :shell, privileged: false, :path => "setup/lamp.sh", args: PHPMYADMIN_PORT
   #
   # View the documentation for the provider you are using for more
   # information on available options.
