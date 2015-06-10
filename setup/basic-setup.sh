@@ -8,7 +8,7 @@ sudo apt-get -qq update
 export DEBIAN_FRONTEND=noninteractive
  
 echo -e "\n--- Install base packages ---\n"
-sudo apt-get -yqq install curl git
+sudo apt-get -yqq install curl git ed
 
 echo -e "\n--- Installing Apache packages ---\n"
 sudo apt-get -yqq install apache2

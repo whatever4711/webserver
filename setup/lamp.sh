@@ -2,7 +2,11 @@
  
 # Variables
 PHPMYADMIN_PORT=$1
-APP_NAME=$2
+DB_HOST=$2
+DB_PORT="3306"
+APP_NAME=$3
+APP_USER_AND_DB=$4
+APP_DB_PWD=$5
 
 echo -e "\n--- Enabling mod-rewrite ---\n"
 sudo a2enmod rewrite
@@ -10,7 +14,7 @@ sudo a2enmod rewrite
 echo -e "\n--- Allowing Apache override to all ---\n"
 sudo sed -i "s/AllowOverride None/AllowOverride All/g" /etc/apache2/apache2.conf
  
-echo -e "\n--- Setting document root to public directory ---\n"
+#echo -e "\n--- Setting document root to public directory ---\n"
 #rm -rf /var/www
 #ln -fs /vagrant/public /var/www
  
@@ -41,11 +45,48 @@ sudo apt-get install -yqq python-setuptools libapache2-mod-wsgi-py3 virtualenv
 sudo a2dismod mpm_event
 sudo a2enmod wsgi
 
-cd /var/www
-sudo mkdir $APP_NAME && cd $APP_NAME
-sudo virtualenv -p python3 env
-sudo env/bin/pip install django pymysql
-sudo env/bin/django-admin.py startproject $APP_NAME .
+sudo mkdir /var/www/$APP_NAME 
+cd /var/www/$APP_NAME
+sudo virtualenv -p python3 ./env
+sudo ./env/bin/pip3.4 search -v django &> /dev/null
+sudo ./env/bin/pip3.4 install django
+sudo ./env/bin/pip3.4 search -v mysql &> /dev/null
+sudo ./env/bin/pip3.4 install pymysql
+sudo ./env/bin/django-admin.py startproject $APP_NAME .
+
+
+echo -e "\n--- Creating DB APP Info ---\n"
+sudo bash -c "cat > db" <<EOF
+'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': '%DBNAME%',
+        'USER': '%DBUSER%',
+        'PASSWORD': '%DBPASSWD%',
+        'HOST': '%DBHOST%',
+        'PORT': '%DBPORT%',
+    }
+}
+
+EOF
+sudo sed -i 's/%DBNAME%/'"${APP_USER_AND_DB}"'/g' db
+sudo sed -i 's/%DBUSER%/'"${APP_USER_AND_DB}"'/g' db
+sudo sed -i 's/%DBPASSWD%/'"${APP_DB_PWD}"'/g' db
+sudo sed -i 's/%DBHOST%/'"${DB_HOST}"'/g' db
+sudo sed -i 's/%DBPORT%/'"${DB_PORT}"'/g' db
+
+sudo ed -s /var/www/$APP_NAME/$APP_NAME/settings.py <<EOF
+/DATABASES = {/+,/# Internationalization/-d
+/DATABASES = {/ r db
+w
+q
+EOF
+
+sudo rm db
+
+sudo bash -c "cat > /var/www/$APP_NAME/$APP_NAME/__init__.py" <<EOF
+import pymysql
+pymysql.install_as_MySQLdb()
+EOF
 
 echo -e "\n--- Add environment variables to Apache ---\n"
 sudo bash -c "cat > /etc/apache2/sites-enabled/000-default.conf" <<EOF
