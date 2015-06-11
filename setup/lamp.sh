@@ -100,8 +100,8 @@ pymysql.install_as_MySQLdb()
 EOF
 
 source env/bin/activate
-echo "from django.contrib.auth.models import User; User.objects.create_superuser('${APP_ADMIN}', '${APP_ADMIN_MAIL}', '${APP_ADMIN_PWD}')" | python3 manage.py shell
 python3 manage.py migrate &> /dev/null
+echo "from django.contrib.auth.models import User; User.objects.create_superuser('${APP_ADMIN}', '${APP_ADMIN_MAIL}', '${APP_ADMIN_PWD}')" | python3 manage.py shell
 python3 manage.py collectstatic --noinput &> /dev/null
 deactivate
 
