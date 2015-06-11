@@ -1,16 +1,21 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-
+# MYSQL and PHPMyAdmin Parameter
 DB_HOST="localhost"
 DB_NAME="dbname"
 DB_USER="dbuser"
 DB_USER_PWD="123"
 DB_ROOT_PWD="456"
 PHPMYADMIN_PORT="81"
+
+# Django Parameter
 APP_NAME="webdjango"
 APP_USER_AND_DB="webdjango"
 APP_DB_PWD="258"
+APP_ADMIN="admin"
+APP_ADMIN_PWD="django"
+APP_ADMIN_MAIL="admin@fake.net"
 
 Vagrant.configure(2) do |config|
   # The most common configuration options are documented and commented below.
@@ -59,7 +64,7 @@ Vagrant.configure(2) do |config|
   config.vm.provision :shell, privileged: false, :path => "setup/basic-setup.sh"
   config.vm.provision :shell, privileged: false, :path => "setup/mysql.sh", args: [DB_ROOT_PWD, DB_NAME, DB_USER, DB_USER_PWD, APP_USER_AND_DB, APP_DB_PWD]
   config.vm.provision :shell, privileged: false, :path => "setup/phpmyadmin.sh", args: [DB_ROOT_PWD, DB_USER_PWD]
-  config.vm.provision :shell, privileged: false, :path => "setup/lamp.sh", args: [PHPMYADMIN_PORT, DB_HOST, APP_NAME, APP_USER_AND_DB, APP_DB_PWD]
+  config.vm.provision :shell, privileged: false, :path => "setup/lamp.sh", args: [PHPMYADMIN_PORT, DB_HOST, APP_NAME, APP_USER_AND_DB, APP_DB_PWD, APP_ADMIN, APP_ADMIN_PWD, APP_ADMIN_MAIL]
   #
   # View the documentation for the provider you are using for more
   # information on available options.

@@ -7,6 +7,10 @@ DB_PORT="3306"
 APP_NAME=$3
 APP_USER_AND_DB=$4
 APP_DB_PWD=$5
+APP_ADMIN=$6
+APP_ADMIN_PWD=$7
+APP_ADMIN_MAIL=$8
+
 
 echo -e "\n--- Enabling mod-rewrite ---\n"
 sudo a2enmod rewrite
@@ -45,18 +49,22 @@ sudo apt-get install -yqq python-setuptools libapache2-mod-wsgi-py3 virtualenv
 sudo a2dismod mpm_event
 sudo a2enmod wsgi
 
-sudo mkdir /var/www/$APP_NAME 
-cd /var/www/$APP_NAME
-sudo virtualenv -p python3 ./env
-sudo ./env/bin/pip3.4 search -v django &> /dev/null
-sudo ./env/bin/pip3.4 install django
-sudo ./env/bin/pip3.4 search -v mysql &> /dev/null
-sudo ./env/bin/pip3.4 install pymysql
-sudo ./env/bin/django-admin.py startproject $APP_NAME .
-
+sudo mkdir -p /var/django
+sudo mkdir -p /var/www/static
+sudo chown -R vagrant:root /var/django
+sudo chown -R vagrant:root /var/www/static
+cd /var/django
+virtualenv -p python3 ./env
+source env/bin/activate
+pip3.4 search -v django &> /dev/null
+pip3.4 install django
+pip3.4 search -v pymysql &> /dev/null
+pip3.4 install pymysql
+django-admin.py startproject $APP_NAME .
+deactivate
 
 echo -e "\n--- Creating DB APP Info ---\n"
-sudo bash -c "cat > db" <<EOF
+cat > db <<EOF
 'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': '%DBNAME%',
@@ -68,48 +76,56 @@ sudo bash -c "cat > db" <<EOF
 }
 
 EOF
-sudo sed -i 's/%DBNAME%/'"${APP_USER_AND_DB}"'/g' db
-sudo sed -i 's/%DBUSER%/'"${APP_USER_AND_DB}"'/g' db
-sudo sed -i 's/%DBPASSWD%/'"${APP_DB_PWD}"'/g' db
-sudo sed -i 's/%DBHOST%/'"${DB_HOST}"'/g' db
-sudo sed -i 's/%DBPORT%/'"${DB_PORT}"'/g' db
+sed -i 's/%DBNAME%/'"${APP_USER_AND_DB}"'/g' db
+sed -i 's/%DBUSER%/'"${APP_USER_AND_DB}"'/g' db
+sed -i 's/%DBPASSWD%/'"${APP_DB_PWD}"'/g' db
+sed -i 's/%DBHOST%/'"${DB_HOST}"'/g' db
+sed -i 's/%DBPORT%/'"${DB_PORT}"'/g' db
 
-sudo ed -s /var/www/$APP_NAME/$APP_NAME/settings.py <<EOF
+ed -s ./$APP_NAME/settings.py <<EOF
 /DATABASES = {/+,/# Internationalization/-d
 /DATABASES = {/ r db
 w
 q
 EOF
 
-sudo rm db
+rm db
 
-sudo bash -c "cat > /var/www/$APP_NAME/$APP_NAME/__init__.py" <<EOF
+sed -i '/STATIC_ROOT/d' ./$APP_NAME/settings.py
+echo "STATIC_ROOT = '/var/www/static'" >> ./$APP_NAME/settings.py
+
+cat > ./$APP_NAME/__init__.py <<EOF
 import pymysql
 pymysql.install_as_MySQLdb()
 EOF
 
-# TODO Script for Superuser and admin CSS
-#sudo cp -r /var/www/$APP_NAME/env/lib/python3.4/site-packages/django/contrib/admin/static /var/www/$APP_NAME
-sudo ./env/bin/python3 manage.py migrate
+source env/bin/activate
+echo "from django.contrib.auth.models import User; User.objects.create_superuser('${APP_ADMIN}', '${APP_ADMIN_MAIL}', '${APP_ADMIN_PWD}')" | python3 manage.py shell
+python3 manage.py migrate &> /dev/null
+python3 manage.py collectstatic --noinput &> /dev/null
+deactivate
 
 echo -e "\n--- Add environment variables to Apache ---\n"
 sudo bash -c "cat > /etc/apache2/sites-enabled/000-default.conf" <<EOF
 <VirtualHost *:80>
-WSGIDaemonProcess %PLACEHOLDER% python-path=/var/www/%PLACEHOLDER%::/var/www/%PLACEHOLDER%/env/lib/python3.4/site-packages
+WSGIDaemonProcess %PLACEHOLDER% python-path=/var/django/::/var/django/env/lib/python3.4/site-packages
 WSGIProcessGroup %PLACEHOLDER%
-WSGIScriptAlias / /var/www/%PLACEHOLDER%/%PLACEHOLDER%/wsgi.py
+WSGIScriptAlias / /var/django/%PLACEHOLDER%/wsgi.py
 
 Alias /html /var/www/html/
+Alias /static/ /var/www/static/
 
-    <Directory /var/www/test>
-       Options +ExecCGI
-       DirectoryIndex index.py
-       AddHandler cgi-script .py
-    </Directory>
     <Directory /var/www/html>
        Options Indexes FollowSymLinks
        AllowOverride All
        Require all granted
+    </Directory>
+    <Directory /var/django/%PLACEHOLDER%>
+       <Files wsgi.py>
+           Order deny,allow
+           Allow from all
+           Require all granted
+       </Files>
     </Directory>
 
     DocumentRoot /var/www
